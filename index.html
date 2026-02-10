@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonido Unicornio | Producción de Eventos</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+
+<body>
+
+<header>
+  <nav>
+    <div class="logo">
+      <img src="img/logo.png" alt="Sonido Unicornio">
+      <span>Sonido Unicornio</span>
+    </div>
+
+    <div class="nav-links" id="nav"></div>
+
+    <div class="burger" id="burger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>Escenarios, Luces & Sonido</h1>
+  <p>
+    Producción profesional para eventos que se sienten,
+    se viven y se recuerdan.
+  </p>
+</section>
+
+<section class="products">
+  <div class="grid">
+    <!-- Google Sheets render -->
+  </div>
+</section>
+
+<!-- Cart UI -->
+<div class="cart-overlay" id="cart-overlay">
+  <div class="cart-sidebar">
+    <div class="cart-header">
+      <h2>Mi Pedido</h2>
+      <button class="close-cart" id="close-cart">&times;</button>
+    </div>
+    
+    <div class="cart-items" id="cart-items">
+      <p class="empty-cart-msg">Tu carrito está vacío.</p>
+    </div>
+
+    <div class="cart-footer">
+      <div class="contact-selector">
+        <label>Enviar a:</label>
+        <select id="contact-select"></select>
+      </div>
+      <button id="checkout-btn" class="btn-checkout">Solicitar Cotización via WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Selection Modal -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal-content">
+    <button class="close-modal" id="close-product-modal">&times;</button>
+    
+    <div class="modal-header">
+        <h3 id="modal-product-name">Seleccionar Opción</h3>
+        <div class="step-indicator" id="step-indicator">Paso 1 de 3</div>
+    </div>
+
+    <!-- Step 1: Price -->
+    <div class="modal-step active" id="modal-step-1">
+        <div class="modal-options" id="modal-options">
+          <!-- Options injected via JS -->
+        </div>
+    </div>
+
+    <!-- Step 2: Calendar -->
+    <div class="modal-step" id="modal-step-2">
+        <div id="calendar-container" class="calendar-container">
+            <!-- Calendar injected via JS -->
+        </div>
+    </div>
+
+    <!-- Step 3: Map (Location) -->
+    <div class="modal-step" id="modal-step-3">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Selecciona la ubicación del evento (Cochabamba):</p>
+        <div id="map-container"></div>
+        <p id="location-status" style="font-size: 0.8rem; color: var(--gold); margin-top: 0.5rem; min-height: 1.2em;"></p>
+    </div>
+
+    <!-- Step 4: Confirmation -->
+    <div class="modal-step" id="modal-step-4">
+        <div class="confirmation-summary" id="confirmation-summary">
+            <!-- Summary injected via JS -->
+        </div>
+    </div>
+
+    <div class="modal-navigation">
+        <button id="modal-back-btn" class="btn-secondary">Atrás</button>
+        <button id="modal-next-btn" class="btn-checkout">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<button class="cart-floating-btn" id="cart-toggle">
+  <span class="cart-icon">🛒</span>
+  <span class="cart-count" id="cart-count">0</span>
+</button>
+
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+</body>
+</html>
