@@ -200,7 +200,9 @@ function renderProducts(sectionId) {
             btn.onclick = () => {
                 const target = document.getElementById(`cat-${categoryId}`);
                 if (target) {
-                    const headerOffset = 240; // Aumentado para compensar header + controles dobles
+                    // Ajuste dinámico del offset según el dispositivo
+                    const isMobile = window.innerWidth < 1024;
+                    const headerOffset = isMobile ? 220 : 100; 
                     const elementPosition = target.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
                     window.scrollTo({ top: offsetPosition, behavior: "smooth" });
@@ -1162,7 +1164,8 @@ window.addEventListener('scroll', () => {
     if (titles.length === 0) return;
 
     let currentId = '';
-    const offset = 300; // Ajuste para detectar antes de llegar al tope
+    // Ajuste del punto de detección
+    const offset = window.innerWidth < 1024 ? 250 : 150;
 
     titles.forEach(title => {
         const rect = title.getBoundingClientRect();
