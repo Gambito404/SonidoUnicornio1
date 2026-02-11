@@ -31,14 +31,33 @@
 html,
 body {
   width: 100%;
-  overflow-x: hidden;
+}
+
+/* Forzar visibilidad de scrollbar */
+html {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--gold) rgba(255, 255, 255, 0.05); /* Firefox */
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 211, 106, 0.5);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 body {
   background-color: var(--bg-dark);
   background-image:
-    radial-gradient(circle at 15% 15%, var(--rose-glow), transparent 40%),
-    radial-gradient(circle at 85% 85%, var(--gold-glow), transparent 45%);
+    linear-gradient(rgba(5, 5, 7, 0.85), rgba(5, 5, 7, 0.85)),
+    url('https://wallpapers.com/images/hd/music-festival-5000-x-3513-wallpaper-6e4yb4e3oonwmv0z.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
   color: var(--text-main);
   font-family: var(--font-body);
@@ -59,6 +78,13 @@ header {
   background: rgba(5, 5, 7, 0.85);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Estado inicial oculto del header */
+.header-hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 
 nav {
@@ -177,30 +203,44 @@ nav {
    HERO
 ======================================== */
 .hero {
-  padding: 3rem 2rem;
-  max-width: 1100px;
-  margin: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background-color: var(--bg-dark);
+  background-image: inherit; /* Hereda el fondo del body */
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  position: relative;
-  animation: fadeInUp 1s ease-out;
+  padding: 2rem;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
 }
 
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, var(--rose-glow), transparent 55%);
-  z-index: -1;
+.hero.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.hero-logo {
+  width: 120px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 0 30px var(--gold-glow));
+  animation: fadeInUp 0.8s ease-out;
 }
 
 .hero h1 {
   font-family: var(--font-title);
-  font-size: clamp(3rem, 6vw, 5rem);
+  font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 900;
   background: linear-gradient(135deg, var(--rose), var(--gold));
   -webkit-background-clip: text;
   color: transparent;
   margin-bottom: 1.2rem;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
 .hero p {
@@ -209,6 +249,39 @@ nav {
   margin: auto;
   color: var(--text-muted);
   line-height: 1.6;
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 3rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+.hero-btn-large {
+  padding: 1rem 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: var(--font-title);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: 0.3s;
+  font-size: 1rem;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.hero-btn-large:hover {
+  background: var(--gold);
+  color: #000;
+  box-shadow: 0 0 30px var(--gold-glow);
+  transform: translateY(-5px);
 }
 
 /* ========================================
@@ -217,7 +290,101 @@ nav {
 .products {
   max-width: 1400px;
   margin: auto;
-  padding: 2rem 2rem 6rem;
+  padding: 1rem 2rem 6rem; /* Reducido padding superior */
+  transition: opacity 0.8s ease;
+}
+
+.products.content-hidden {
+  opacity: 0;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+.sticky-nav-wrapper {
+  position: sticky;
+  top: 88px; /* Ajuste fino para pegarse justo debajo del header */
+  z-index: 990;
+  background: rgba(5, 5, 7, 0.85);
+  backdrop-filter: blur(14px);
+  margin: 0 -2rem 1.5rem -2rem;
+  padding-top: 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.section-nav,
+.category-nav {
+  display: flex;
+  gap: 0.8rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 2rem; /* Padding lateral interno */
+}
+
+.section-nav {
+  padding-top: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.category-nav {
+  padding-bottom: 1rem;
+  padding-top: 0.5rem;
+}
+
+.section-nav::-webkit-scrollbar,
+.category-nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Estilo TABS para Secciones (Nivel Superior) */
+.section-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  padding: 0.8rem 1rem;
+  border-radius: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: 0.3s;
+  white-space: nowrap;
+}
+
+.section-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  background: transparent;
+}
+
+.section-btn:hover {
+  color: var(--text-main);
+}
+
+/* Estilo CHIPS para Categorías (Nivel Inferior) */
+.category-btn {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  transition: 0.3s;
+}
+
+.category-btn:hover,
+.category-btn.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(255, 211, 106, 0.05);
 }
 
 .category-title {
@@ -236,6 +403,12 @@ nav {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ========================================
@@ -280,14 +453,14 @@ nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.4);
   color: white;
   border: none;
   padding: 0.5rem;
   cursor: pointer;
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
   border-radius: 50%;
   width: 35px;
   height: 35px;
@@ -297,12 +470,12 @@ nav {
   line-height: 1;
 }
 
-.card:hover .slider-btn {
-  opacity: 1;
-}
-
 .slider-btn:hover {
   background: rgba(0, 0, 0, 0.7);
+}
+
+.card:hover .slider-btn {
+  opacity: 0.8;
 }
 
 .slider-btn.prev {
@@ -392,6 +565,12 @@ nav {
   border-radius: 6px;
 }
 
+.price-label[data-type-id] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--gold);
+}
+
 .btn-add-cart {
   cursor: pointer;
   text-decoration: none;
@@ -473,7 +652,7 @@ nav {
   top: 50%;
   transform: translateY(-50%);
   color: white;
-  background: rgba(0, 0, 0, 0.3);
+  background: #FF9800;
   border: none;
   font-size: 2rem;
   cursor: pointer;
@@ -483,7 +662,7 @@ nav {
 }
 
 .lightbox-nav:hover {
-  background: rgba(0, 0, 0, 0.6);
+  background: #FFC107;
 }
 
 .lightbox-nav.prev {
@@ -501,8 +680,9 @@ nav {
 ======================================== */
 .cart-floating-btn {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
+  top: 150px;
+  bottom: auto;
+  right: 20px;
   background: var(--gold);
   color: #000;
   border: none;
@@ -549,6 +729,9 @@ nav {
   opacity: 0;
   pointer-events: none;
   transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-overlay.open {
@@ -557,23 +740,25 @@ nav {
 }
 
 .cart-sidebar {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100%;
-  max-width: 400px;
-  height: 100%;
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  height: auto;
+  max-height: 85vh;
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: 0.3s cubic-bezier(0.77, 0, 0.175, 1);
-  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  transform: scale(0.9);
+  opacity: 0;
+  transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
 }
 
 .cart-overlay.open .cart-sidebar {
-  transform: translateX(0);
+  transform: scale(1);
+  opacity: 1;
 }
 
 .cart-header {
@@ -658,31 +843,42 @@ nav {
   padding: 0.5rem;
 }
 
+.cart-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 4px;
+}
+
+.btn-view-details {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-view-details:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn-edit-item {
+  background: rgba(255, 211, 106, 0.1);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.btn-edit-item:hover {
+  background: var(--gold);
+  color: #000;
+}
+
 .cart-footer {
   padding: 1.5rem;
   border-top: 1px solid var(--border);
   background: var(--surface-soft);
-}
-
-.contact-selector {
-  margin-bottom: 1rem;
-}
-
-.contact-selector label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.contact-selector select {
-  width: 100%;
-  padding: 0.8rem;
-  background: var(--bg-dark);
-  border: 1px solid var(--border);
-  color: var(--gold);
-  border-radius: 6px;
-  font-family: var(--font-body);
 }
 
 .btn-checkout {
@@ -713,41 +909,62 @@ nav {
    MOBILE MENU (SOLUCIÓN DEFINITIVA)
 ======================================== */
 @media (max-width: 768px) {
-
-  .nav-links {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 100vw;
-    height: 100vh;
-
-    background: rgba(5, 5, 7, 0.98);
-    backdrop-filter: blur(12px);
-
+  nav {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 2.5rem;
-
-    transform: translateX(100%);
-    transition: transform 0.35s ease;
-
-    z-index: 1500;
+    padding: 1rem;
+    gap: 1rem;
   }
 
-  .nav-links.active {
-    transform: translateX(0);
+  .logo {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nav-links {
+    position: static;
+    width: 100%;
+    height: auto;
+    background: transparent;
+    backdrop-filter: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.8rem;
+    transform: none;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+  
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-links a::after {
+    display: none;
   }
 
   .nav-links a {
-    font-size: 1.8rem;
-    font-family: var(--font-title);
-    font-weight: 900;
-    color: var(--text-main);
+    font-size: 0.85rem;
+    background: var(--surface-soft);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .nav-links a.active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
   }
 
   .burger {
-    display: block;
+    display: none;
+  }
+
+  /* Hacer visibles los botones del slider en móvil */
+  .slider-btn {
+    opacity: 0.7;
   }
 
   .grid {
@@ -757,6 +974,113 @@ nav {
   .hero {
     padding-top: 3rem;
   }
+
+  .sticky-nav-wrapper {
+    top: 80px; /* Ajuste fino para móvil */
+  }
+}
+
+/* ========================================
+   FOOTER
+======================================== */
+.main-footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 3rem 2rem;
+  text-align: center;
+  margin-top: 4rem;
+}
+
+.footer-content p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+.developer-credit a {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.developer-credit a:hover {
+  text-shadow: 0 0 10px var(--gold-glow);
+  color: #fff;
+}
+
+.btn-contact-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.5rem;
+  background: #25D366;
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: 0.3s;
+  font-size: 0.9rem;
+}
+
+.btn-contact-footer:hover {
+  background: #20bd5a;
+  box-shadow: 0 0 15px rgba(37, 211, 102, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   TOOLTIP STYLES
+======================================== */
+.tooltip-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.tooltip-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.tooltip-content {
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  position: relative;
+  text-align: center;
+  animation: fadeInUp 0.3s ease;
+}
+
+.close-tooltip {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+#tooltip-title {
+  color: var(--gold);
+  font-family: var(--font-title);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
 }
 
 /* ========================================
@@ -874,13 +1198,51 @@ nav {
     text-align: left;
 }
 
-.step-indicator {
-    font-size: 0.8rem;
-    font-weight: 600;
+.visual-step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.step-bubble {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface-soft);
+    border: 2px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.4s ease;
+}
+
+.step-bubble.completed {
+    background: rgba(255, 211, 106, 0.2);
+    border-color: var(--gold);
     color: var(--gold);
-    background: rgba(255, 211, 106, 0.1);
-    padding: 4px 10px;
-    border-radius: 50px;
+    cursor: pointer;
+}
+
+.step-bubble.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    transform: scale(1.1);
+}
+
+.step-connector {
+    width: 20px;
+    height: 2px;
+    background: var(--border);
+    transition: background 0.4s ease;
+}
+
+.step-connector.completed {
+    background: var(--gold);
 }
 
 .modal-step {
@@ -1059,4 +1421,57 @@ nav {
   background: transparent;
   border: none;
   cursor: default;
+}
+
+/* ========================================
+   CUSTOM ALERT & BLUR
+======================================== */
+.custom-alert-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000; /* Por encima de todo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.custom-alert-overlay.active {
+  opacity: 1;
+}
+
+.custom-alert-box {
+  background: rgba(15, 15, 20, 0.95);
+  border: 1px solid var(--gold);
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transform: scale(0.9);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.custom-alert-overlay.active .custom-alert-box {
+  transform: scale(1);
+}
+
+.custom-alert-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
+
+#custom-alert-msg {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Clase para difuminar el contenido */
+.blur-active {
+  filter: blur(2px); /* Desenfoque mucho más suave */
+  transition: filter 0.3s ease;
 }

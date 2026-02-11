@@ -1,9 +1,10 @@
 // main.js
-const burger = document.querySelector(".burger");
-const nav = document.getElementById("nav");
-const heroTitle = document.querySelector(".hero h1");
-const heroSubtitle = document.querySelector(".hero p");
+const sectionNav = document.getElementById("section-nav");
+const heroNav = document.getElementById("hero-nav");
 const productsGrid = document.querySelector(".products .grid");
+const welcomeScreen = document.getElementById("welcome-screen");
+const mainHeader = document.getElementById("main-header");
+const mainContent = document.getElementById("main-content");
 
 // State to hold all data from sheets
 let allSections = [];
@@ -14,12 +15,6 @@ let allPrices = [];
 let allImages = [];
 let cart = [];
 
-burger.addEventListener("click", () => {
-  nav.classList.toggle("active");
-  burger.classList.toggle("active");
-  document.body.classList.toggle("menu-open");
-});
- 
 // Helper para verificar si un campo es activo (true/activo/si/yes)
 function isActive(val) {
     if (!val) return false;
@@ -157,6 +152,8 @@ async function fetchSheetData(sheetName, gid) {
 // Renders the product cards for a given section
 function renderProducts(sectionId) {
     productsGrid.innerHTML = ''; // Clear existing products
+    const categoryNav = document.getElementById('category-nav');
+    if (categoryNav) categoryNav.innerHTML = '';
     
     if (!allProducts || allProducts.length === 0) {
         productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Próximamente más equipos.</p>';
@@ -190,6 +187,29 @@ function renderProducts(sectionId) {
         return Number(a) - Number(b);
     });
 
+    // Populate Category Nav
+    if (categoryNav && sortedCategoryIds.length > 0) {
+        sortedCategoryIds.forEach(categoryId => {
+            const categoryData = allCategories.find(cat => cat.id_categoria == categoryId);
+            const categoryDisplayName = categoryData ? categoryData.titulo : (categoryId === 'varios' ? 'Varios' : categoryId);
+            
+            const btn = document.createElement('button');
+            btn.className = 'category-btn';
+            btn.textContent = categoryDisplayName;
+            btn.dataset.id = categoryId; // ID para el scroll spy
+            btn.onclick = () => {
+                const target = document.getElementById(`cat-${categoryId}`);
+                if (target) {
+                    const headerOffset = 240; // Aumentado para compensar header + controles dobles
+                    const elementPosition = target.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+                }
+            };
+            categoryNav.appendChild(btn);
+        });
+    }
+
     sortedCategoryIds.forEach(categoryId => {
         const categoryData = allCategories.find(cat => cat.id_categoria == categoryId);
         const categoryDisplayName = categoryData ? categoryData.titulo : categoryId;
@@ -197,6 +217,7 @@ function renderProducts(sectionId) {
         // Crear y añadir el título de la categoría a la grilla
         const categoryTitle = document.createElement('h3');
         categoryTitle.className = 'category-title';
+        categoryTitle.id = `cat-${categoryId}`;
         categoryTitle.textContent = categoryDisplayName;
         productsGrid.appendChild(categoryTitle);
 
@@ -248,8 +269,9 @@ function renderProducts(sectionId) {
                 // Si hay precios en la nueva tabla, los mostramos todos
                 const pricesList = productPrices.map(p => {
                     const type = allPriceTypes.find(t => t.id_tipo_precio == p.id_tipo_precio);
-                    const typeName = type ? type.nombre : ''; // Ej: Alquiler
-                    return `<div class="price-row"><span class="price-amount">Bs ${p.precio}</span> <span class="price-label">${typeName}</span></div>`;
+                    const typeName = type ? type.nombre : '';
+                    const typeId = type ? type.id_tipo_precio : '';
+                    return `<div class="price-row"><span class="price-amount">Bs ${p.precio}</span> <span class="price-label" data-type-id="${typeId}">${typeName}</span></div>`;
                 }).join('');
                 
                 priceHTML = `<div class="price-list">${pricesList}</div>`;
@@ -314,6 +336,11 @@ function renderProducts(sectionId) {
         if (e.target.classList.contains('btn-add-cart')) {
             openProductModal(e.target.dataset.id);
         }
+        // Delegación para el tooltip de descripción
+        if (e.target.classList.contains('price-label') && e.target.dataset.typeId) {
+            const typeId = e.target.dataset.typeId;
+            showDescriptionTooltip(typeId);
+        }
     });
 }
 
@@ -328,18 +355,14 @@ function renderContent(sectionId) {
         return;
     }
 
-    // Update hero section and page title
-    heroTitle.textContent = sectionData.nombre;
-    heroSubtitle.textContent = sectionData.descripcion;
-    document.title = `${sectionData.nombre} | Neon Sound`;
 
-    // Update active link in navigation
-    const navLinks = nav.querySelectorAll('a');
-    navLinks.forEach(link => {
-        if (link.dataset.section === sectionId) {
-            link.classList.add('active');
+    // Update active button in section navigation
+    const sectionBtns = sectionNav.querySelectorAll('.section-btn');
+    sectionBtns.forEach(btn => {
+        if (btn.dataset.section === sectionId) {
+            btn.classList.add('active');
         } else {
-            link.classList.remove('active');
+            btn.classList.remove('active');
         }
     });
 
@@ -356,13 +379,16 @@ const closeCart = document.getElementById('close-cart');
 const cartItemsContainer = document.getElementById('cart-items');
 const cartCount = document.getElementById('cart-count');
 const checkoutBtn = document.getElementById('checkout-btn');
-const contactSelect = document.getElementById('contact-select');
 const productModal = document.getElementById('product-modal');
 const modalSteps = document.querySelectorAll('.modal-step');
 const stepIndicator = document.getElementById('step-indicator');
 const modalBackBtn = document.getElementById('modal-back-btn');
 const modalNextBtn = document.getElementById('modal-next-btn');
 const closeModalBtn = document.getElementById('close-product-modal');
+const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+const cartDetailModal = document.getElementById('cart-detail-modal');
+let itemToDeleteIndex = null;
+let editingCartIndex = null; // Índice del producto que se está editando
 
 let currentStep = 1;
 let totalSteps = 4; // Ahora son 4 pasos por defecto (incluyendo mapa)
@@ -383,8 +409,86 @@ cartOverlay.addEventListener('click', (e) => {
 });
 
 // ========================================
+// DESCRIPTION TOOLTIP LOGIC
+// ========================================
+const tooltipOverlay = document.getElementById('desc-tooltip');
+const tooltipTitle = document.getElementById('tooltip-title');
+const tooltipDescription = document.getElementById('tooltip-description');
+const closeTooltipBtn = document.getElementById('close-tooltip-btn');
+
+function showDescriptionTooltip(typeId) {
+    const priceType = allPriceTypes.find(t => t.id_tipo_precio == typeId);
+    if (!priceType || !priceType.descripcion) return;
+
+    tooltipTitle.textContent = priceType.nombre || 'Descripción';
+    tooltipDescription.textContent = priceType.descripcion;
+    tooltipOverlay.classList.add('open');
+}
+
+function closeDescriptionTooltip() {
+    tooltipOverlay.classList.remove('open');
+}
+
+closeTooltipBtn.onclick = closeDescriptionTooltip;
+tooltipOverlay.onclick = (e) => { if (e.target === tooltipOverlay) closeDescriptionTooltip(); };
+
+// ========================================
+// CUSTOM ALERT LOGIC
+// ========================================
+function showCustomAlert(message) {
+    const alertOverlay = document.getElementById('custom-alert');
+    const alertMsg = document.getElementById('custom-alert-msg');
+    // Elementos a difuminar
+    const elementsToBlur = [
+        document.getElementById('main-header'),
+        document.getElementById('main-content'),
+        document.querySelector('.main-footer')
+    ];
+
+    alertMsg.textContent = message;
+    alertOverlay.classList.add('active');
+    // elementsToBlur.forEach(el => { if(el) el.classList.add('blur-active'); }); // Desactivamos el blur si es muy invasivo, o lo dejamos sutil
+
+    setTimeout(() => {
+        alertOverlay.classList.remove('active');
+        // elementsToBlur.forEach(el => { if(el) el.classList.remove('blur-active'); });
+    }, 2000);
+}
+
+// ========================================
 // MULTI-STEP MODAL LOGIC
 // ========================================
+function renderVisualSteps(current, total) {
+    const container = document.getElementById('visual-step-indicator');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (let i = 1; i <= total; i++) {
+        const bubble = document.createElement('div');
+        bubble.className = 'step-bubble';
+        bubble.textContent = i;
+
+        if (i < current) {
+            bubble.classList.add('completed');
+            // Allow clicking on completed steps to go back
+            bubble.onclick = () => goToStep(i);
+        } else if (i === current) {
+            bubble.classList.add('active');
+        }
+
+        container.appendChild(bubble);
+
+        if (i < total) {
+            const connector = document.createElement('div');
+            connector.className = 'step-connector';
+            if (i < current) {
+                connector.classList.add('completed');
+            }
+            container.appendChild(connector);
+        }
+    }
+}
+
 function goToStep(stepNumber) {
     currentStep = stepNumber;
     // Hide all steps
@@ -394,54 +498,18 @@ function goToStep(stepNumber) {
     if (currentStepElement) {
         currentStepElement.style.display = 'block';
     }
-    
+
     // Si entramos al paso del mapa, redimensionar para evitar gris
     if (currentStep === 3) {
         setTimeout(() => { if(mapInstance) mapInstance.invalidateSize(); }, 100);
     }
 
-    // Update indicator
-    stepIndicator.textContent = `Paso ${currentStep} de ${totalSteps}`;
+    // Update visual indicator
+    renderVisualSteps(currentStep, totalSteps);
 
     // Update buttons
     modalBackBtn.style.display = currentStep > 1 ? 'block' : 'none';
     modalNextBtn.textContent = currentStep === 4 ? 'Confirmar y Agregar' : 'Siguiente';
-}
-
-function renderConfirmationStep() {
-    const summaryContainer = document.getElementById('confirmation-summary');
-    const { product, priceDetails, dates, location } = selectionData;
-
-    let dateText = 'No aplica';
-    let datesHtml = '';
-
-    if (dates && dates.length > 0) {
-        // Agrupar fechas por mes
-        const datesByMonth = dates.reduce((acc, dateStr) => {
-            const [y, m, d] = dateStr.split('-');
-            const monthKey = `${y}-${m}`;
-            if (!acc[monthKey]) acc[monthKey] = [];
-            acc[monthKey].push(d);
-            return acc;
-        }, {});
-
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-        datesHtml = Object.entries(datesByMonth).map(([key, days]) => {
-            const [y, m] = key.split('-');
-            const monthName = monthNames[parseInt(m) - 1];
-            return `<div><strong>${monthName} ${y}:</strong> ${days.join(', ')}</div>`;
-        }).join('');
-    }
-    
-    const locationText = location ? `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}` : 'No seleccionada';
-
-    summaryContainer.innerHTML = `
-        <div class="summary-item"><strong>Producto:</strong><span>${product.nombre}</span></div>
-        <div class="summary-item"><strong>Opción:</strong><span>${priceDetails.type} - Bs ${priceDetails.amount}</span></div>
-        <div class="summary-item"><strong>Fechas:</strong><span>${datesHtml || dateText}</span></div>
-        <div class="summary-item"><strong>Ubicación:</strong><span>${locationText}</span></div>
-    `;
 }
 
 // ========================================
@@ -584,11 +652,12 @@ function initMap() {
 
 closeModalBtn.addEventListener('click', () => productModal.classList.remove('open'));
 
-function openProductModal(productId) {
+function openProductModal(productId, itemToEdit = null) {
     // Reset state
     selectionData = {};
     selectedDatesSet.clear();
     calendarViewDate = new Date();
+    editingCartIndex = itemToEdit ? cart.indexOf(itemToEdit) : null;
     
     // Reset map marker if exists
     if (mapInstance && mapMarker) {
@@ -598,7 +667,14 @@ function openProductModal(productId) {
     const product = allProducts.find(p => p.id_producto == productId);
     if (!product) return;
 
-    selectionData.product = product;
+    // Si estamos editando, usamos los datos existentes, si no, iniciamos vacío
+    selectionData = itemToEdit ? JSON.parse(JSON.stringify(itemToEdit)) : { product: product };
+    
+    // Restaurar fechas si estamos editando
+    if (itemToEdit && itemToEdit.dates) {
+        itemToEdit.dates.forEach(d => selectedDatesSet.add(d));
+    }
+
     document.getElementById('modal-product-name').textContent = product.nombre;
     
     const optionsContainer = document.getElementById('modal-options');
@@ -618,9 +694,16 @@ function openProductModal(productId) {
             const requiresReturn = type && type.requiere_retorno ? isActive(type.requiere_retorno) : true;
             const minDays = type ? (type.dias_minimos || type['dias minimos'] || 0) : 0;
             
+            // Verificar si esta opción debe estar seleccionada (en modo edición)
+            let isChecked = index === 0;
+            if (itemToEdit) {
+                // Comparamos precio y nombre de tipo para encontrar la opción correcta
+                isChecked = (p.precio == itemToEdit.priceDetails.amount && typeName == itemToEdit.priceDetails.type);
+            }
+
             const html = `
                 <label>
-                    <input type="radio" name="price_option" value="${index}" data-return="${requiresReturn}" data-min-days="${minDays}" class="price-option-input" ${index === 0 ? 'checked' : ''} style="display:none;">
+                    <input type="radio" name="price_option" value="${index}" data-return="${requiresReturn}" data-min-days="${minDays}" class="price-option-input" ${isChecked ? 'checked' : ''} style="display:none;">
                     <div class="price-option-label">
                         <span style="font-weight:600; color:var(--gold);">${typeName}</span>
                         <span>Bs ${p.precio}</span>
@@ -657,9 +740,11 @@ function openProductModal(productId) {
 
     radios.forEach(r => r.addEventListener('change', toggleDates));
     
-    // Resetear selección al abrir modal
-    selectedDatesSet.clear();
-    calendarViewDate = new Date();
+    // Si NO estamos editando, reseteamos fechas. Si editamos, mantenemos las cargadas arriba.
+    if (!itemToEdit) {
+        selectedDatesSet.clear();
+        calendarViewDate = new Date();
+    }
     
     // Show modal and go to first step
     productModal.classList.add('open');
@@ -667,7 +752,16 @@ function openProductModal(productId) {
     toggleDates(); // Call after going to step 1 to ensure elements are visible
     
     // Init map if not already done
-    setTimeout(initMap, 500);
+    setTimeout(() => {
+        initMap();
+        // Si estamos editando y hay ubicación, mover marcador
+        if (itemToEdit && itemToEdit.location && mapMarker) {
+            const loc = itemToEdit.location;
+            mapMarker.setLatLng([loc.lat, loc.lng]);
+            mapInstance.setView([loc.lat, loc.lng], 13);
+            document.getElementById('location-status').textContent = `Ubicación: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+        }
+    }, 500);
 }
 
 modalNextBtn.addEventListener('click', () => {
@@ -716,10 +810,19 @@ modalNextBtn.addEventListener('click', () => {
         goToStep(4);
     } else {
         // --- Final Confirmation Step (4) ---
-        cart.push(selectionData);
+        if (editingCartIndex !== null && editingCartIndex >= 0) {
+            // Actualizar producto existente
+            cart[editingCartIndex] = selectionData;
+            showCustomAlert('Producto actualizado correctamente');
+        } else {
+            // Agregar nuevo producto
+            cart.push(selectionData);
+            showCustomAlert('Producto agregado correctamente');
+        }
+        
         updateCartUI();
         productModal.classList.remove('open');
-        toggleCart(); // Show cart with new item
+        editingCartIndex = null; // Resetear índice de edición
     }
 });
 
@@ -731,10 +834,11 @@ modalBackBtn.addEventListener('click', () => {
 
 function renderConfirmationStep() {
     const summaryContainer = document.getElementById('confirmation-summary');
-    const { product, priceDetails, dates } = selectionData;
+    const { product, priceDetails, dates, location } = selectionData;
 
     let dateText = 'No aplica';
     let datesHtml = '';
+    let totalCalculationHtml = '';
 
     if (dates && dates.length > 0) {
         // Agrupar fechas por mes
@@ -753,18 +857,118 @@ function renderConfirmationStep() {
             const monthName = monthNames[parseInt(m) - 1];
             return `<div><strong>${monthName} ${y}:</strong> ${days.join(', ')}</div>`;
         }).join('');
+
+        // Cálculo de precio total estimado
+        const unitPrice = parseFloat(priceDetails.amount);
+        const daysCount = dates.length;
+        
+        // Si es alquiler (permite múltiples fechas) multiplicamos, si no (venta) asumimos precio único
+        if (!isNaN(unitPrice)) {
+            let total = unitPrice;
+            let calcText = `Bs ${unitPrice}`;
+            
+            if (selectionData.allowMultipleDates && daysCount > 1) {
+                total = unitPrice * daysCount;
+                calcText = `Bs ${unitPrice} x ${daysCount} días = Bs ${total}`;
+            }
+            
+            totalCalculationHtml = `<div class="summary-item" style="border:1px solid var(--gold);"><strong>Total Estimado:</strong><span>${calcText}</span></div>`;
+        }
     }
+
+    const locationText = location ? `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}` : 'No seleccionada';
 
     summaryContainer.innerHTML = `
         <div class="summary-item"><strong>Producto:</strong><span>${product.nombre}</span></div>
         <div class="summary-item"><strong>Opción:</strong><span>${priceDetails.type} - Bs ${priceDetails.amount}</span></div>
         <div class="summary-item"><strong>Fechas:</strong><span>${datesHtml || dateText}</span></div>
+        <div class="summary-item"><strong>Ubicación:</strong><span>${locationText}</span></div>
+        ${totalCalculationHtml}
     `;
 }
 
-function removeFromCart(index) {
-    cart.splice(index, 1);
-    updateCartUI();
+// ========================================
+// CART ITEM DETAILS & DELETE LOGIC
+// ========================================
+
+// Delete Confirmation
+const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+function requestRemoveFromCart(index) {
+    itemToDeleteIndex = index;
+    deleteConfirmModal.classList.add('open');
+}
+
+cancelDeleteBtn.addEventListener('click', () => {
+    deleteConfirmModal.classList.remove('open');
+    itemToDeleteIndex = null;
+});
+
+confirmDeleteBtn.addEventListener('click', () => {
+    if (itemToDeleteIndex !== null) {
+        cart.splice(itemToDeleteIndex, 1);
+        updateCartUI();
+        deleteConfirmModal.classList.remove('open');
+        showCustomAlert("Producto eliminado");
+    }
+});
+
+// View Details
+const closeDetailModalBtn = document.getElementById('close-detail-modal');
+closeDetailModalBtn.addEventListener('click', () => cartDetailModal.classList.remove('open'));
+
+function viewCartItem(index) {
+    const item = cart[index];
+    if (!item) return;
+
+    document.getElementById('detail-product-name').textContent = item.product.nombre;
+    const container = document.getElementById('detail-content');
+    
+    // Reutilizamos la lógica de renderizado de resumen
+    // Creamos un objeto temporal selectionData para usar la función existente o lo hacemos manual
+    let dateText = 'No aplica';
+    let datesHtml = '';
+    let totalCalculationHtml = '';
+
+    if (item.dates && item.dates.length > 0) {
+         datesHtml = item.dates.join(', '); // Simplificado para vista rápida
+         
+         // Cálculo de precio total
+         const unitPrice = parseFloat(item.priceDetails.amount);
+         const daysCount = item.dates.length;
+         
+         if (!isNaN(unitPrice)) {
+             let total = unitPrice;
+             let calcText = `Bs ${unitPrice}`;
+             
+             if (item.allowMultipleDates && daysCount > 1) {
+                 total = unitPrice * daysCount;
+                 calcText = `Bs ${unitPrice} x ${daysCount} días = Bs ${total}`;
+             }
+             totalCalculationHtml = `<div class="summary-item" style="border:1px solid var(--gold);"><strong>Total Estimado:</strong><span>${calcText}</span></div>`;
+         }
+    }
+    const locationText = item.location ? `Lat: ${item.location.lat.toFixed(4)}, Lng: ${item.location.lng.toFixed(4)}` : 'No seleccionada';
+
+    container.innerHTML = `
+        <div class="summary-item"><strong>Opción:</strong><span>${item.priceDetails.type}</span></div>
+        <div class="summary-item"><strong>Precio:</strong><span>Bs ${item.priceDetails.amount}</span></div>
+        <div class="summary-item"><strong>Fechas:</strong><span>${datesHtml || dateText}</span></div>
+        <div class="summary-item"><strong>Ubicación:</strong><span>${locationText}</span></div>
+        ${totalCalculationHtml}
+    `;
+
+    cartDetailModal.classList.add('open');
+}
+
+function editCartItem(index) {
+    const item = cart[index];
+    if (!item) return;
+    // Abrir modal en modo edición
+    openProductModal(item.product.id_producto, item);
+    // Cerrar carrito para ver el modal
+    toggleCart();
 }
 
 function updateCartUI() {
@@ -779,51 +983,66 @@ function updateCartUI() {
     cart.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'cart-item';
-        const dateInfo = item.dates && item.dates.length > 0
-            ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">📅 ${item.dates.length} día(s)</div>`
-            : '';
-        const locInfo = item.location ? `<div style="font-size:0.75rem; color:var(--text-muted);">📍 Cochabamba</div>` : '';
         div.innerHTML = `
             <div class="cart-item-info">
                 <h4>${item.product.nombre}</h4>
-                <small style="color:var(--gold);">${item.priceDetails.type}: Bs ${item.priceDetails.amount}</small>
-                ${dateInfo}
-                ${locInfo}
+                <small style="color:var(--gold);">${item.priceDetails.type}</small>
+                <div class="cart-item-actions">
+                    <button class="btn-view-details" onclick="viewCartItem(${index})">Ver</button>
+                    <button class="btn-view-details btn-edit-item" onclick="editCartItem(${index})">Editar</button>
+                </div>
             </div>
-            <button class="cart-item-remove" onclick="removeFromCart(${index})">&times;</button>
+            <button class="cart-item-remove" onclick="requestRemoveFromCart(${index})">&times;</button>
         `;
         cartItemsContainer.appendChild(div);
     });
 }
 
-// Load contacts from config
-function loadContacts() {
-    if (config.contacts && config.contacts.length > 0) {
-        contactSelect.innerHTML = config.contacts.map(c => 
-            `<option value="${c.number}">${c.name}</option>`
-        ).join('');
-    }
+/* 
+   NOTA: He eliminado la función removeFromCart antigua y la he integrado 
+   en la lógica de confirmación de arriba. Asegúrate de que no quede duplicada.
+*/
+
+/*
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCartUI();
 }
+*/
 
 checkoutBtn.addEventListener('click', () => {
     if (cart.length === 0) {
-        alert("Agrega productos al carrito primero.");
+        showCustomAlert("Tu carrito está vacío");
         return;
     }
 
-    const selectedNumber = contactSelect.value;
-
-    if (!selectedNumber) {
-        alert("Error de configuración: No hay número de contacto.");
-        return;
+    // Usar el primer contacto de la configuración por defecto
+    let selectedNumber = "";
+    if (config.contacts && config.contacts.length > 0) {
+        selectedNumber = config.contacts[0].number;
+    } else {
+        showCustomAlert("Error: No hay número de contacto configurado.");
+        return; 
     }
 
     // Build WhatsApp Message
     let message = `Hola *Sonido Unicornio*, quisiera cotizar los siguientes equipos:\n\n`;
+    let grandTotal = 0;
     
     cart.forEach(item => {
+        const unitPrice = parseFloat(item.priceDetails.amount);
+        let itemTotal = unitPrice;
+        let priceStr = `Bs ${item.priceDetails.amount}`;
+
+        if (!isNaN(unitPrice) && item.allowMultipleDates && item.dates && item.dates.length > 1) {
+            itemTotal = unitPrice * item.dates.length;
+            priceStr = `Bs ${unitPrice} x ${item.dates.length} días = Bs ${itemTotal}`;
+        }
+        
+        if (!isNaN(itemTotal)) grandTotal += itemTotal;
+
         message += `🔹 *${item.product.nombre}*\n`;
-        message += `   - Opción: ${item.priceDetails.type} (Bs ${item.priceDetails.amount})\n`;
+        message += `   - Opción: ${item.priceDetails.type} (${priceStr})\n`;
         if (item.dates && item.dates.length > 0) {
             const formattedDates = item.dates.map(d => {
                 const [y, m, d_day] = d.split('-');
@@ -837,15 +1056,26 @@ checkoutBtn.addEventListener('click', () => {
         message += `\n`;
     });
 
+    if (grandTotal > 0) {
+        message += `💰 *Total Estimado: Bs ${grandTotal}*\n`;
+    }
+
     message += `\nQuedo atento a su respuesta.`;
 
     const url = `https://wa.me/${selectedNumber}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
 });
 
+// Function to enter "App Mode" (Hide welcome, show content)
+function enterAppMode() {
+    welcomeScreen.classList.add('fade-out');
+    mainHeader.classList.remove('header-hidden');
+    mainContent.classList.remove('content-hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // Main function to initialize the app
 async function initializeApp() {
-    heroTitle.textContent = "Cargando...";
     productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando equipos...</p>';
 
     // Fetch all data in parallel.
@@ -867,47 +1097,91 @@ async function initializeApp() {
     allPrices = prices;
     allImages = images;
 
-    // Initialize contacts
-    loadContacts();
+    // Set contact button link
+    const contactBtn = document.getElementById('contact-footer-btn');
+    if (contactBtn && config.contacts && config.contacts.length > 0) {
+        contactBtn.href = `https://wa.me/${config.contacts[0].number}`;
+    }
 
-    // Render navigation
-    nav.innerHTML = '';
+    // Set current year in footer
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+
+    // Render section navigation (Both Hero and Sticky)
+    sectionNav.innerHTML = '';
+    heroNav.innerHTML = '';
     const activeSections = allSections.filter(s => isActive(s.activo));
 
     activeSections.forEach(item => {
-      const link = document.createElement('a');
-      link.href = `#${item.seccion}`; // Use hash for navigation state
-      link.textContent = item.nombre;
-      link.dataset.section = item.seccion; // Store section ID
+      // 1. Botones para la barra pegajosa (Sticky Nav)
+      const btn = document.createElement('button');
+      btn.className = 'section-btn';
+      btn.textContent = item.nombre;
+      btn.dataset.section = item.seccion;
 
-      link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const sectionId = e.target.dataset.section;
+      btn.addEventListener('click', () => {
+          const sectionId = item.seccion;
           history.pushState({ section: sectionId }, '', `#${sectionId}`);
           renderContent(sectionId);
-          if (nav.classList.contains('active')) {
-              nav.classList.remove('active');
-              burger.classList.remove('active');
-              document.body.classList.remove('menu-open');
-          }
       });
-      nav.appendChild(link);
+      sectionNav.appendChild(btn);
+
+      // 2. Botones grandes para la bienvenida (Hero)
+      const heroBtn = document.createElement('button');
+      heroBtn.className = 'hero-btn-large';
+      heroBtn.textContent = item.nombre;
+      
+      heroBtn.addEventListener('click', () => {
+          const sectionId = item.seccion;
+          history.pushState({ section: sectionId }, '', `#${sectionId}`);
+          renderContent(sectionId);
+          enterAppMode(); // Transición visual
+      });
+      heroNav.appendChild(heroBtn);
     });
 
     // Determine initial section to render
     const initialSectionId = window.location.hash.substring(1);
     if (initialSectionId && activeSections.some(s => s.seccion === initialSectionId)) {
+        // Si hay hash, saltamos la bienvenida directamente
+        enterAppMode();
         renderContent(initialSectionId);
-    } else if (activeSections.length > 0) {
-        const defaultSectionId = activeSections[0].seccion;
-        history.replaceState(null, '', `#${defaultSectionId}`);
-        renderContent(defaultSectionId);
     } else {
-        heroTitle.textContent = "No hay secciones activas";
-        heroSubtitle.textContent = "Configura las secciones en Google Sheets.";
-        productsGrid.innerHTML = '';
+        // Si no hay hash, nos quedamos en la bienvenida.
+        // Opcional: Cargar contenido por defecto en segundo plano
+        if (activeSections.length > 0) renderContent(activeSections[0].seccion);
     }
 }
+
+// ========================================
+// SCROLL SPY (Auto-detect Category)
+// ========================================
+window.addEventListener('scroll', () => {
+    const titles = document.querySelectorAll('.category-title');
+    const navBtns = document.querySelectorAll('.category-btn');
+    
+    if (titles.length === 0) return;
+
+    let currentId = '';
+    const offset = 300; // Ajuste para detectar antes de llegar al tope
+
+    titles.forEach(title => {
+        const rect = title.getBoundingClientRect();
+        if (rect.top < offset) {
+            currentId = title.id.replace('cat-', '');
+        }
+    });
+
+    if (currentId) {
+        navBtns.forEach(btn => {
+            if (btn.dataset.id == currentId) {
+                btn.classList.add('active');
+                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+});
 
 // Handle browser back/forward navigation
 window.addEventListener('popstate', (e) => {
