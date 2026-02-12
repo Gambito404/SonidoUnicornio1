@@ -239,7 +239,7 @@ function renderProducts(sectionId) {
                 }
             }
             
-            const placeholderImage = 'https://via.placeholder.com/400x300/0f0f16/1c1c26?text=NEON+SOUND';
+            const placeholderImage = 'https://placehold.co/600x400/111/E5C15D?text=Sin+Imagen';
             const finalImages = productImages.length > 0 ? productImages : [placeholderImage];
 
             // 2. Generar HTML para el slider de imágenes
@@ -347,7 +347,7 @@ function renderProducts(sectionId) {
 }
 
 // Renders the main content (hero + products) for a given section
-function renderContent(sectionId) {
+async function renderContent(sectionId) {
     const sectionData = allSections.find(s => s.seccion === sectionId);
     if (!sectionData) {
         console.error(`No data found for section: ${sectionId}`);
@@ -368,8 +368,45 @@ function renderContent(sectionId) {
         }
     });
 
-    // Render products for this section
-    renderProducts(sectionId);
+    // 1. Renderizar inmediatamente con datos en caché (si existen) para velocidad
+    if (allProducts.length > 0) {
+        renderProducts(sectionId);
+    } else {
+        // Solo en la primera carga mostramos un texto simple
+        productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando catálogo...</p>';
+    }
+
+    // 2. Buscar datos frescos en segundo plano
+    try {
+        const [products, prices, images] = await Promise.all([
+            fetchSheetData('productos', '1891333790'), 
+            fetchSheetData('precios', 'GID_PRECIOS'), 
+            fetchSheetData('imagenes', 'GID_IMAGENES') 
+        ]);
+
+        // 3. Comprobar si hay cambios reales antes de actualizar
+        const hasChanged = JSON.stringify(products) !== JSON.stringify(allProducts) ||
+                           JSON.stringify(prices) !== JSON.stringify(allPrices) ||
+                           JSON.stringify(images) !== JSON.stringify(allImages);
+
+        if (allProducts.length === 0 || hasChanged) {
+            allProducts = products;
+            allPrices = prices;
+            allImages = images;
+
+            // Solo re-renderizar si seguimos en la misma sección
+            const activeBtn = sectionNav.querySelector('.section-btn.active');
+            if (activeBtn && activeBtn.dataset.section === sectionId) {
+                renderProducts(sectionId);
+            }
+        }
+    } catch (error) {
+        console.error("Error loading section data:", error);
+        // Solo mostrar error si la grilla está vacía (fallo en carga inicial)
+        if (!productsGrid.hasChildNodes() || productsGrid.innerHTML.includes('Cargando')) {
+            productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Error al cargar los datos. Por favor intenta de nuevo.</p>';
+        }
+    }
 }
 
 // ========================================
@@ -1078,26 +1115,18 @@ function enterAppMode() {
 
 // Main function to initialize the app
 async function initializeApp() {
-    productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando equipos...</p>';
+    productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando configuración...</p>';
 
-    // Fetch all data in parallel.
-    // gid=0 is for your first sheet ('secciones').
-    // You need to create a THIRD sheet ('categorias') and find its GID.
-    const [sections, products, categories, priceTypes, prices, images] = await Promise.all([
+    // Fetch metadata only (Sections, Categories, Price Types)
+    const [sections, categories, priceTypes] = await Promise.all([
         fetchSheetData('secciones', '0'),
-        fetchSheetData('productos', '1891333790'), // <-- GID de tu hoja "productos"
-        fetchSheetData('categorias', '234567890'), // <-- REEMPLAZA ESTO con el GID de "categorias"
-        fetchSheetData('tipo_precios', 'GID_TIPOS_PRECIO'), // <-- REEMPLAZA con GID de "tipos_de_precio"
-        fetchSheetData('precios', 'GID_PRECIOS'), // <-- REEMPLAZA con GID de "precios"
-        fetchSheetData('imagenes', 'GID_IMAGENES') // <-- REEMPLAZA con GID de "imagenes"
+        fetchSheetData('categorias', '234567890'), 
+        fetchSheetData('tipo_precios', 'GID_TIPOS_PRECIO')
     ]);
 
     allSections = sections;
-    allProducts = products;
     allCategories = categories;
     allPriceTypes = priceTypes;
-    allPrices = prices;
-    allImages = images;
 
     // Set contact button link
     const contactBtn = document.getElementById('contact-footer-btn');
@@ -1133,6 +1162,15 @@ async function initializeApp() {
       heroBtn.textContent = item.nombre;
       
       heroBtn.addEventListener('click', () => {
+          // Activar pantalla completa al iniciar
+          if (!document.fullscreenElement) {
+              if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch(err => console.log(err));
+              } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                  document.documentElement.webkitRequestFullscreen();
+              }
+          }
+
           const sectionId = item.seccion;
           history.pushState({ section: sectionId }, '', `#${sectionId}`);
           renderContent(sectionId);
@@ -1178,7 +1216,7 @@ window.addEventListener('scroll', () => {
         navBtns.forEach(btn => {
             if (btn.dataset.id == currentId) {
                 btn.classList.add('active');
-                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                // Eliminado scrollIntoView automático para evitar bloqueo de clics
             } else {
                 btn.classList.remove('active');
             }

@@ -115,8 +115,9 @@ nav {
 .logo img {
   width: 100px; /* Volvemos al tamaño base seguro */
   transition: transform 0.3s ease;
-  filter: drop-shadow(0 0 10px var(--gold-glow));
+  filter: drop-shadow(0 0 2px var(--gold)) drop-shadow(0 0 10px var(--gold-glow));
   transform: scale(1.5); /* Agrandamos visualmente un 50% sin empujar el header */
+  pointer-events: none; /* Evita que el logo bloquee clics en elementos inferiores */
 }
 
 /* Desktop links */
@@ -232,7 +233,7 @@ nav {
 .hero-logo {
   width: 350px;
   margin-bottom: 1.5rem;
-  filter: drop-shadow(0 0 30px var(--gold-glow));
+  filter: drop-shadow(0 0 5px var(--gold)) drop-shadow(0 0 30px var(--gold-glow));
   animation: fadeInUp 0.8s ease-out;
 }
 
@@ -505,7 +506,7 @@ nav {
 
   .grid {
     padding: 3rem 4rem; /* Espacio para el contenido */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 2.5rem;
   }
 
@@ -784,7 +785,7 @@ nav {
 ======================================== */
 .cart-floating-btn {
   position: fixed;
-  top: 150px;
+  top: 250px;
   bottom: auto;
   right: 20px;
   background: var(--gold);
