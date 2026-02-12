@@ -149,6 +149,25 @@ async function fetchSheetData(sheetName, gid) {
   }
 }
 
+// Helper para generar Skeleton Loader HTML
+function getSkeletonHTML(count = 6) {
+    let html = '';
+    for(let i=0; i<count; i++) {
+        html += `
+        <div class="skeleton-card">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-content">
+                <div class="skeleton-text skeleton-shimmer" style="width: 70%; height: 24px;"></div>
+                <div class="skeleton-text skeleton-shimmer" style="width: 100%;"></div>
+                <div class="skeleton-text skeleton-shimmer" style="width: 100%;"></div>
+                <div class="skeleton-text skeleton-shimmer" style="width: 40%; margin-top: auto;"></div>
+            </div>
+        </div>
+        `;
+    }
+    return html;
+}
+
 // Renders the product cards for a given section
 function renderProducts(sectionId) {
     productsGrid.innerHTML = ''; // Clear existing products
@@ -373,7 +392,7 @@ async function renderContent(sectionId) {
         renderProducts(sectionId);
     } else {
         // Solo en la primera carga mostramos un texto simple
-        productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando catálogo...</p>';
+        productsGrid.innerHTML = getSkeletonHTML(6);
     }
 
     // 2. Buscar datos frescos en segundo plano
@@ -1115,7 +1134,7 @@ function enterAppMode() {
 
 // Main function to initialize the app
 async function initializeApp() {
-    productsGrid.innerHTML = '<p style="color: #bbb; grid-column: 1 / -1; text-align: center;">Cargando configuración...</p>';
+    productsGrid.innerHTML = getSkeletonHTML(3); // Skeleton inicial
 
     // Fetch metadata only (Sections, Categories, Price Types)
     const [sections, categories, priceTypes] = await Promise.all([
